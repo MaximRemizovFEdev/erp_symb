@@ -1,44 +1,65 @@
-### Order Number Generation Logic
+## Swagger Documentation
 
-We need to implement automatic generation of order numbers in format `SO-XXXX` where X is incrementing number. Let's add this in `orders.controller.ts`:
+```yaml
+swagger: '2.0'
+info:
+  title: ERP System API
+  version: 1.0.0
+  description: 'Full API specification for ERP-System with CRUD operations for orders, customers, payments, and specialized production/office views'
+servers:
+  - url: 'http://localhost:3000'
 
-```typescript
-// Add to orders.controller.ts
-import { db } from '../services/db.service'
+paths:
+  '/api/orders':
+    get:
+      summary: 'List all orders'
+      produces: ['application/json']
+      responses:
+        '200':
+          description: 'List of orders'
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Order'
+    post:
+      summary: 'Create new order'
+      consumes: ['application/json']
+      parameters:
+        - in: body
+          name: order
+          required: true
+          schema:
+            type: object
+            properties:
+              orderNumber: { type: string }
+              customerId: { type: string }
+              items: { type: array, items: { $ref: '#/definitions/OrderItem' } }
+      responses:
+        '201':
+          description: 'Created order'
+          schema:
+            $ref: '#/definitions/Order'
 
-export const create = async (req: Request, res: Response) => {
-  try {
-    // Check if orderNumber is provided, else generate automatically
-    if (!req.body.orderNumber) {
-      const lastOrder = await db.order
-        .orderBy({ orderNumber: 'desc' })
-        .first()
-
-      let newNumber = 'SO-0001'
-      if (lastOrder) {
-        const currentNumber = parseInt(lastOrder.orderNumber.replace('SO-', ''))
-        newNumber = `SO-${String(currentNumber + 1).padStart(4, '0')}'
-      }
-
-      req.body.orderNumber = newNumber
-    }
-
-    const newOrder = await db.order.create({
-      data: req.body,
-      include: { orderItems: true }
-    })
-
-    res.status(201).json(newOrder)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
+definitions:
+  Order:
+    type: object
+    properties:
+      id: { type: string }
+      orderNumber: { type: string }
+      customerId: { type: string }
+      items: { type: array, items: { $ref: '#/definitions/OrderItem' } }
+      status: { type: string }
+      orderSum: { type: number }
+      profit: { type: number }
+    required: ['id', 'orderNumber']
+  OrderItem:
+    type: object
+    properties:
+      id: { type: string }
+      productName: { type: string }
+      quantity: { type: integer }
+      pricePerUnit: { type: number }
+      contractorId: { type: string }
+      productionStatus: { type: string }
+    required: ['id', 'productName']
 ```
-
-This implementation:
-1. Checks if orderNumber is provided
-2. If not, finds last order number
-3. Increments the number and formats it as SO-XXXX
-4. Assigns it to the new order
-
-Should we modify Prisma schema to use sequence instead? The current approach works but may have race conditions in concurrent scenarios.
