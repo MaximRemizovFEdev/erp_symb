@@ -17,6 +17,10 @@ const financialFields = new Set([
   "managerCommissionSum",
   "orderSum",
   "paidAmount",
+  "amount",
+  "allocatedAmount",
+  "unallocatedAmount",
+  "overpaidAmount",
   "paymentDue",
   "officePaymentDue"
 ]);

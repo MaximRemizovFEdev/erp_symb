@@ -31,6 +31,7 @@ export type OrderCalculationResult = {
   paidAmount: number;
   paymentDue: number;
   officePaymentDue: number;
+  overpaidAmount: number;
   marginPercent: number;
 };
 
@@ -68,7 +69,9 @@ export function calculateOrder(input: OrderCalculationInput): OrderCalculationRe
   const itemsTaxSum = sum(input.items, "taxSum");
   const profitSum = sum(input.items, "profitSum");
   const paidAmount = input.paidAmount ?? 0;
-  const paymentDue = orderSum - paidAmount;
+  const rawPaymentDue = orderSum - paidAmount;
+  const paymentDue = Math.max(rawPaymentDue, 0);
+  const overpaidAmount = Math.max(paidAmount - orderSum, 0);
   const marginPercent = orderSum === 0 ? 0 : profitSum / orderSum * 100;
 
   return {
@@ -80,6 +83,7 @@ export function calculateOrder(input: OrderCalculationInput): OrderCalculationRe
     paidAmount: roundMoney(paidAmount),
     paymentDue: roundMoney(paymentDue),
     officePaymentDue: roundMoney(paymentDue),
+    overpaidAmount: roundMoney(overpaidAmount),
     marginPercent: roundPercent(marginPercent)
   };
 }

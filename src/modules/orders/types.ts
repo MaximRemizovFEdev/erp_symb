@@ -17,6 +17,7 @@ export type OrderRecord = CollectionRecord & {
   paidAmount: number;
   paymentDue: number;
   officePaymentDue: number;
+  overpaidAmount: number;
   marginPercent: number;
 };
 

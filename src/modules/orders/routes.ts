@@ -92,6 +92,7 @@ export function registerOrderRoutes(app: FastifyInstance, options: RegisterOrder
       paidAmount: 0,
       paymentDue: 0,
       officePaymentDue: 0,
+      overpaidAmount: 0,
       marginPercent: 0
     };
 
@@ -337,7 +338,7 @@ function toCalculationResult(item: OrderItemRecord): OrderItemCalculationResult 
   };
 }
 
-function parseBody<T extends CollectionRecord | Partial<CollectionRecord>>(schema: ZodType<T>, body: unknown): T {
+function parseBody<T>(schema: ZodType<T>, body: unknown): T {
   const result = schema.safeParse(body);
 
   if (!result.success) {

@@ -248,7 +248,7 @@ export function registerCrmRoutes(app: FastifyInstance, options: RegisterCrmRout
   }
 }
 
-function parseBody<T extends CollectionRecord | Partial<CollectionRecord>>(schema: ZodType<T>, body: unknown): T {
+function parseBody<T>(schema: ZodType<T>, body: unknown): T {
   const result = schema.safeParse(body);
 
   if (!result.success) {

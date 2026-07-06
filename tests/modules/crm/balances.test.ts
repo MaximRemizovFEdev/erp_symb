@@ -17,14 +17,14 @@ test("CRM balance helpers calculate customer and company balances from orders an
       { id: "order_3", customerId: "customer_2", companyId: "company_1", orderSum: 30 }
     ]);
     await createCollectionRepository("order-payments", dataDir).replaceAll([
-      { id: "payment_1", customerId: "customer_1", companyId: "company_1", amount: 40 }
+      { id: "payment_1", customerId: "customer_1", companyId: "company_1", amount: 40, allocatedAmount: 10, unallocatedAmount: 30 }
     ]);
     await createCollectionRepository("payment-allocations", dataDir).replaceAll([
       { id: "allocation_1", orderId: "order_1", amount: 10 }
     ]);
 
-    assert.equal(await calculateCustomerBalance("customer_1", { dataDir }), 120);
-    assert.equal(await calculateCompanyBalance("company_1", { dataDir }), 130);
+    assert.equal(await calculateCustomerBalance("customer_1", { dataDir }), 130);
+    assert.equal(await calculateCompanyBalance("company_1", { dataDir }), 140);
   } finally {
     await rm(dataDir, { recursive: true, force: true });
   }

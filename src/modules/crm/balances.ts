@@ -9,12 +9,16 @@ export async function calculateCustomerBalance(customerId: string, context: Bala
   const payments = await createCollectionRepository("order-payments", context.dataDir).findAll();
   const allocations = await createCollectionRepository("payment-allocations", context.dataDir).findAll();
 
-  const orderIds = new Set(orders.filter((order) => order.customerId === customerId).map((order) => order.id));
-  const orderTotal = sumAmounts(orders.filter((order) => order.customerId === customerId), ["orderSum", "totalAmount", "amount"]);
-  const directPayments = sumAmounts(payments.filter((payment) => payment.customerId === customerId), ["amount", "paidAmount"]);
+  const customerOrders = orders.filter((order) => order.customerId === customerId);
+  const orderIds = new Set(customerOrders.map((order) => order.id));
+  const orderTotal = sumAmounts(customerOrders, ["orderSum", "totalAmount", "amount"]);
   const allocatedPayments = sumAmounts(allocations.filter((allocation) => orderIds.has(String(allocation.orderId))), ["amount"]);
+  const unallocatedPayments = sumAmounts(
+    payments.filter((payment) => payment.customerId === customerId),
+    ["unallocatedAmount"]
+  );
 
-  return roundMoney(orderTotal - directPayments - allocatedPayments);
+  return roundMoney(orderTotal - allocatedPayments - unallocatedPayments);
 }
 
 export async function calculateCompanyBalance(companyId: string, context: BalanceContext = {}): Promise<number> {
@@ -22,12 +26,16 @@ export async function calculateCompanyBalance(companyId: string, context: Balanc
   const payments = await createCollectionRepository("order-payments", context.dataDir).findAll();
   const allocations = await createCollectionRepository("payment-allocations", context.dataDir).findAll();
 
-  const orderIds = new Set(orders.filter((order) => order.companyId === companyId).map((order) => order.id));
-  const orderTotal = sumAmounts(orders.filter((order) => order.companyId === companyId), ["orderSum", "totalAmount", "amount"]);
-  const directPayments = sumAmounts(payments.filter((payment) => payment.companyId === companyId), ["amount", "paidAmount"]);
+  const companyOrders = orders.filter((order) => order.companyId === companyId);
+  const orderIds = new Set(companyOrders.map((order) => order.id));
+  const orderTotal = sumAmounts(companyOrders, ["orderSum", "totalAmount", "amount"]);
   const allocatedPayments = sumAmounts(allocations.filter((allocation) => orderIds.has(String(allocation.orderId))), ["amount"]);
+  const unallocatedPayments = sumAmounts(
+    payments.filter((payment) => payment.companyId === companyId),
+    ["unallocatedAmount"]
+  );
 
-  return roundMoney(orderTotal - directPayments - allocatedPayments);
+  return roundMoney(orderTotal - allocatedPayments - unallocatedPayments);
 }
 
 export async function withCustomerBalance<T extends CollectionRecord & { id: string }>(
