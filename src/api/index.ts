@@ -1,25 +1,37 @@
-import express from 'express'
-import cors from 'cors'
-import morgan from 'morgan'
-import dotenv from 'dotenv'
-import { ordersRouter } from './routes/orders'
+import express from 'express';
+import cors from 'cors';
+import { PrismaClient } from '@prisma/client';
 
-dotenv.config()
+const app = express();
+const prisma = new PrismaClient();
 
-const app = express()
-app.use(cors())
-app.use(morgan('dev'))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(cors());
+app.use(express.json());
 
-const PORT = process.env.PORT || 3000
+// Routes
+const ordersRouter = require('./routes/orders').router;
+const orderItemsRouter = require('./routes/order_items').router;
+const customersRouter = require('./routes/customers').router;
+const companiesRouter = require('./routes/companies').router;
+const employeesRouter = require('./routes/employees').router;
+const contractorsRouter = require('./routes/contractors').router;
+const paymentsRouter = require('./routes/payments').router;
 
-app.get('/', (req, res) => {
-  res.json({ message: 'ERP Symbolica API' })
-})
+app.use('/api/orders', ordersRouter);
+app.use('/api/order-items', orderItemsRouter);
+app.use('/api/customers', customersRouter);
+app.use('/api/companies', companiesRouter);
+app.use('/api/employees', employeesRouter);
+app.use('/api/contractors', contractorsRouter);
+app.use('/api/payments', paymentsRouter);
 
-app.use('/api', ordersRouter)
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
 
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+  console.log(`Server running on port ${PORT}`);
+});
+
+export { app, prisma };

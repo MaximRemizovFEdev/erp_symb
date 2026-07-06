@@ -1,269 +1,94 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
 }
 
-// Справочники
+model Order {
+  id           String   @id @default(cuid())
+  orderNumber  String   @unique
+  date         DateTime
+  deadline     DateTime
+  customerId   String
+  companyId    String
+  managerId    String
+  statusId     String
+  officeStatusId String
+  orderSum     Float    @default(0)
+  profitSum    Float    @default(0)
+  items        OrderItem[]
+  payments     OrderPayment[]
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id])
+  productName  String
+  quantity     Int
+  pricePerUnit Float
+  orderSum     Float    @default(0)
+  totalCost    Float    @default(0)
+  contractor1Id String?
+  contractor2Id String?
+  contractor1Cost Float @default(0)
+  contractor2Cost Float @default(0)
+}
+
+model OrderPayment {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id])
+  customerId   String
+  companyId    String
+  amount       Float
+  paymentDate  DateTime
+  paymentType  PaymentType
+}
+
+model Customer {
+  id    String @id @default(cuid())
+  name  String
+  phone String?
+}
+
+model CustomerCompany {
+  id   String @id @default(cuid())
+  name String
+}
+
+model Employee {
+  id          String @id @default(cuid())
+  fullName    String
+  position    String
+  commissionPercent Float @default(0)
+}
+
+model Contractor {
+  id   String @id @default(cuid())
+  name String
+  type ContractorType
+}
+
 model OrderStatus {
-  id        String   @id @default(cuid())
-  name       String   @unique // Новый, В работе, Готов, Доставлен
+  id   String @id @default(cuid())
+  name String @unique
 }
 
 model OfficeStatus {
-  id        String   @id @default(cuid())
-  name       String   @unique // Не в офисе, В офисе, Выдан
+  id   String @id @default(cuid())
+  name String @unique
 }
 
 model ProductionStatus {
-  id        String   @id @default(cuid())
-  name       String   @unique // В производстве, Готово к выдаче и т.д.
-}
-
-// Сотрудники (для менеджеров)
-model Employee {
-  id            String   @id @default(cuid())
-  fullName      String
-  phone         String?
-  position       String
-  commissionPercent Float   @default(0)
-  salaryFixed     Float   @default(0)
-  directusUser    String?
-  isActive       Boolean  @default(true)
-
-  // Отношения
-  orders       Order[]
-  ordersItems   OrderItem[]
-  customers    Customer[]
-}
-
-// Контрагенты
-model Contractor {
-  id        String   @id @default(cuid())
-  name       String
-  type       ContractorType // Собственное производство, Внешний подрядчик
-  isActive   Boolean  @default(true)
-
-  // Отношения
-  orderItems1 OrderItem[] @relation(name: "Contractor1", fields: [id], references: [id])
-  orderItems2 OrderItem[] @relation(name: "Contractor2", fields: [id], references: [id])
-}
-
-enum ContractorType {
-  production
-  contractor
-}
-
-// Клиенты
-model Customer {
-  id                String   @id @default(cuid())
-  name              String
-  phone             String?
-  email             String?
-  comments          String?
-
-  balance           Float   @default(0)
-  debtToUs          Float   @default(0)
-  ourDebtToCustomer  Float   @default(0)
-
-  manager           Employee?  @relation(fields: [managerId], references: [id])
-  managerId         String?
-
-  // Связи со многими компаниями через junction
-  companies         CustomerCompanyLink[]
-
-  // Отношения
-  orders            Order[]
-  payments          OrderPayment[]
-
-  // Статистика
-  ordersTotalSum    Float   @default(0)
-  paymentsTotalIn   Float   @default(0)
-  refundsTotalOut   Float   @default(0)
-}
-
-// Компании клиентов
-model CustomerCompany {
-  id                String   @id @default(cuid())
-  name              String
-  phone             String?
-  email             String?
-
-  balance           Float   @default(0)
-  debtToUs          Float   @default(0)
-  ourDebtToCustomer  Float   @default(0)
-
-  managerId         String? // менеджер, ответственный за эту компанию
-
-  // Отношения
-  customerLinks    CustomerCompanyLink[]
-}
-
-// Связь клиент ↔️ компания (многие ко многим)
-model CustomerCompanyLink {
-  customer          Customer   @relation(fields: [customerId], references: [id])
-  customerId        String
-
-  company           CustomerCompany   @relation(fields: [companyId], references: [id])
-  companyId         String
-
-  @@id([customerId, companyId])
-}
-
-// Основная сущность заказа
-model Order {
-  id                  String   @id @default(cuid())
-  orderNumber         String   @unique // SO-00001, SO-00002, т.д.
-  date                DateTime
-  deadline            DateTime
-
-  // Связи
-  manager             Employee  @relation(fields: [managerId], references: [id])
-  managerId           String
-
-  customer            Customer  @relation(fields: [customerId], references: [id])
-  customerId          String
-
-  company             CustomerCompany  @relation(fields: [companyId], references: [id])
-  companyId           String
-
-  // Данные заказа
-  status              OrderStatus  @relation(fields: [statusId], references: [id])
-  statusId            String
-
-  officeStatus        OfficeStatus  @relation(fields: [officeStatusId], references: [id])
-  officeStatusId      String
-
-  shippingMethod      ShippingMethod // Способ получения
-  shippingComment     String?
-  comment             String?
-  paymentType         PaymentType
-
-  // Вычисляемые поля
-  orderSum            Float   @default(0)
-  itemsTotalCost      Float   @default(0)
-  itemsManagerCommissionSum Float   @default(0)
-  itemsTaxSum        Float   @default(0)
-  paidAmount          Float   @default(0)
-  paymentDue          Float   @default(0)
-  officePaymentDue    Float   @default(0)
-  profitSum           Float   @default(0)
-  marginPercent       Float   @default(0)
-
-  // Отношения
-  items                OrderItem[]
-  payments            OrderPayment[]
-
-  @@index([orderNumber])
-  @@index([date])
-}
-
-// Позиции заказа
-model OrderItem {
-  id                  String   @id @default(cuid())
-  order               Order    @relation(fields: [orderId], references: [id])
-  orderId             String
-
-  productName         String
-  quantity            Int
-  pricePerUnit        Float
-  orderSum            Float   @default(0)
-
-  // Контрагенты
-  contractor1           Contractor? @relation(name: "Contractor1", fields: [contractor1Id], references: [id])
-  contractor1Id        String?
-
-  contractor2           Contractor? @relation(name: "Contractor2", fields: [contractor2Id], references: [id])
-  contractor2Id        String?
-
-  // Себестоимость через основные поля для простоты
-  contractor1Cost      Float   @default(0)
-  contractor2Cost      Float   @default(0)
-
-  unitCost             Float   @default(0)
-  totalCost            Float   @default(0)
-
-  technicalTaskText   String?
-  url                  String?
-
-  // Статусы
-  productionStatus     ProductionStatus  @relation(fields: [productionStatusId], references: [id])
-  productionStatusId   String
-
-  productionComment    String?
-  officeStatus         OfficeStatus?    @relation(fields: [officeStatusId], references: [id])
-  officeStatusId       String?
-
-  deadline             DateTime
-
-  // Менеджер позиции
-  manager             Employee?  @relation(fields: [managerId], references: [id])
-  managerId           String?
-
-  @@index([orderId])
-  @@index([productionStatusId])
-  @@index([officeStatusId])
-}
-
-// Оплаты заказа
-model OrderPayment {
-  id                  String   @id @default(cuid())
-  order               Order    @relation(fields: [orderId], references: [id])
-  orderId             String
-
-  customer            Customer  @relation(fields: [customerId], references: [id])
-  customerId          String
-
-  company             CustomerCompany  @relation(fields: [companyId], references: [id])
-  companyId           String
-
-  amount              Float
-  paymentDate         DateTime
-  paymentType         PaymentType
-  paymentDirection    PaymentDirection // Входящий, Исходящий
-  allocationMode      AllocationMode // Автоматический, Ручной
-
-  allocatedAmount     Float   @default(0)
-  unallocatedAmount   Float   @default(0)
-  comment             String?
-
-  // Распределение оплат
-  allocations         PaymentAllocation[]
-
-  @@index([orderId])
-  @@index([paymentDate])
-}
-
-// Распределение оплат
-model PaymentAllocation {
-  id                  String   @id @default(cuid())
-  payment             OrderPayment  @relation(fields: [paymentId], references: [id])
-  paymentId           String
-
-  order               Order    @relation(fields: [orderId], references: [id])
-  orderId             String
-
-  amount              Float
-  comment             String?
-
-  @@index([paymentId])
-  @@index([orderId])
-}
-
-// Перечисления
-enum ShippingMethod {
-  office_pickup
-  courier
-  delivery
+  id   String @id @default(cuid())
+  name String @unique
 }
 
 enum PaymentType {
@@ -272,12 +97,7 @@ enum PaymentType {
   bank_transfer
 }
 
-enum PaymentDirection {
-  incoming
-  outgoing
-}
-
-enum AllocationMode {
-  automatic
-  manual
+enum ContractorType {
+  production
+  contractor
 }
