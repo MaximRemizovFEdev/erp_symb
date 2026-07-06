@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "user_admin_dev",
+      "username": "admin",
+      "role": "admin",
+      "passwordHash": "pbkdf2$sha256$120000$dev_admin_salt_v1$F3Za9oi1nlhtBQnYH3IWujaQtIoRSLNCKUp0SuTDTto",
+      "employeeId": "employee_admin_dev",
+      "active": true
+    }
+  ]
+}

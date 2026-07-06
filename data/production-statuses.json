@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "production_pending",
+      "name": "Pending",
+      "sortOrder": 10,
+      "final": false
+    },
+    {
+      "id": "production_in_progress",
+      "name": "In progress",
+      "sortOrder": 20,
+      "final": false
+    },
+    {
+      "id": "production_done",
+      "name": "Done",
+      "sortOrder": 30,
+      "final": true
+    },
+    {
+      "id": "production_blocked",
+      "name": "Blocked",
+      "sortOrder": 40,
+      "final": false
+    }
+  ]
+}

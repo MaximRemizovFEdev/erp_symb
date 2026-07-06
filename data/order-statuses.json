@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "order_new",
+      "name": "New",
+      "sortOrder": 10,
+      "final": false
+    },
+    {
+      "id": "order_in_progress",
+      "name": "In progress",
+      "sortOrder": 20,
+      "final": false
+    },
+    {
+      "id": "order_ready",
+      "name": "Ready",
+      "sortOrder": 30,
+      "final": false
+    },
+    {
+      "id": "order_completed",
+      "name": "Completed",
+      "sortOrder": 40,
+      "final": true
+    },
+    {
+      "id": "order_cancelled",
+      "name": "Cancelled",
+      "sortOrder": 50,
+      "final": true
+    }
+  ]
+}

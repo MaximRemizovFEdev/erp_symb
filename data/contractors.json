@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "contractor_internal",
+      "name": "Internal production",
+      "type": "internal",
+      "active": true
+    },
+    {
+      "id": "contractor_silk_screen",
+      "name": "Silk screen production",
+      "type": "production",
+      "active": true
+    }
+  ]
+}

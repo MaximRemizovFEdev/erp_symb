@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "office_not_ready",
+      "name": "Not ready",
+      "sortOrder": 10,
+      "final": false
+    },
+    {
+      "id": "office_ready",
+      "name": "Ready",
+      "sortOrder": 20,
+      "final": false
+    },
+    {
+      "id": "office_issued",
+      "name": "Issued",
+      "sortOrder": 30,
+      "final": true
+    },
+    {
+      "id": "office_cancelled",
+      "name": "Cancelled",
+      "sortOrder": 40,
+      "final": true
+    }
+  ]
+}
