@@ -9,6 +9,7 @@ import { registerPaymentRoutes } from "./modules/payments/index.js";
 import { registerProductionRoutes } from "./modules/production/index.js";
 import { registerReferenceRoutes } from "./modules/reference-data/index.js";
 import { normalizeError, type ErrorResponse } from "./shared/errors.js";
+import { registerStaticFrontend } from "./static.js";
 
 export type BuildAppOptions = {
   dataDir?: string;
@@ -28,6 +29,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     ttlSeconds: env.authTokenTtlSeconds
   });
   const authHooks = createAuthHooks(tokenService);
+
+  registerStaticFrontend(app);
 
   app.get("/health", async () => {
     return {
