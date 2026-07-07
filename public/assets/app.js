@@ -9,19 +9,22 @@ const state = {
 };
 
 const roleViews = {
-  admin: ["orders", "crm", "payments", "office"],
-  owner: ["orders", "crm", "payments", "office"],
+  admin: ["orders", "crm", "payments", "office", "admin"],
+  owner: ["orders", "crm", "payments", "office", "admin"],
   manager: ["orders", "crm", "payments"],
   office: ["payments", "office"],
   production: ["production"]
 };
+
+const accountRoles = ["admin", "owner", "manager", "office", "production"];
 
 const viewLabels = {
   orders: "Заказы",
   crm: "Клиенты",
   payments: "Оплаты",
   production: "Производство",
-  office: "Офис"
+  office: "Офис",
+  admin: "Администрирование"
 };
 
 function money(value) {
@@ -161,6 +164,9 @@ async function loadViewData() {
       state.data.productionItems = contractorId ? await api(`/production/${contractorId}/items`) : [];
     }
     if (state.view === "office") state.data.officeOrders = await api("/office/orders");
+    if (state.view === "admin") {
+      [state.data.employees, state.data.adminUsers] = await Promise.all([api("/employees"), api("/admin/users")]);
+    }
   } catch (error) {
     state.error = error.message;
   }
@@ -172,11 +178,20 @@ function viewHtml() {
   if (state.view === "payments") return paymentsView();
   if (state.view === "production") return productionView();
   if (state.view === "office") return officeView();
+  if (state.view === "admin") return adminView();
   return `<section class="panel">Нет доступного раздела</section>`;
 }
 
 function options(items, selected = "") {
   return `<option value="">—</option>${(items || []).map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === selected ? "selected" : ""}>${escapeHtml(item.fullName || item.name || item.title || item.username || item.id)}</option>`).join("")}`;
+}
+
+function roleOptions(selected = "") {
+  return accountRoles.map((role) => `<option value="${role}" ${role === selected ? "selected" : ""}>${role}</option>`).join("");
+}
+
+function activeOptions(selected = true) {
+  return `<option value="true" ${selected !== false ? "selected" : ""}>Активен</option><option value="false" ${selected === false ? "selected" : ""}>Отключен</option>`;
 }
 
 function ordersView() {
@@ -222,6 +237,16 @@ function officeView() {
   return `<div class="topbar"><div><h2>Офис</h2><div class="subtle">Статусы готовности и прием платежей</div></div></div><section class="panel"><h3>Заказы</h3><div class="list">${orders.length ? orders.map((order) => `<article class="item"><div class="item-head"><div><div class="item-title">${escapeHtml(order.orderNumber || order.id)}</div><div class="meta"><span>Клиент: ${escapeHtml(order.customerId)}</span><span>Офис: ${escapeHtml(order.officeStatusId)}</span></div></div></div><form class="actions office-status" data-id="${escapeHtml(order.id)}"><select name="officeStatusId">${options(state.data.officeStatuses, order.officeStatusId)}</select><button class="secondary">Обновить статус</button></form><form class="actions office-payment" data-id="${escapeHtml(order.id)}"><input name="amount" type="number" min="1" step="1" placeholder="Сумма" required /><input name="method" placeholder="Метод" /><button class="primary">Принять оплату</button></form>${(order.items || []).map((item) => `<div class="meta"><span>${escapeHtml(item.name)}</span><span>${item.quantity} шт.</span><span>${escapeHtml(item.officeStatusId || "")}</span></div>`).join("")}</article>`).join("") : `<div class="empty">Нет заказов для офиса</div>`}</div></section>`;
 }
 
+function adminView() {
+  const employees = state.data.employees || [];
+  const users = state.data.adminUsers || [];
+  return `<div class="topbar"><div><h2>Администрирование</h2><div class="subtle">Сотрудники и учетные записи</div></div></div><section class="grid"><form class="panel span-4 form-grid" id="employee-form"><h3>Новый сотрудник</h3><div class="form-row"><label>ФИО</label><input name="fullName" required /></div><div class="form-row"><label>Email</label><input name="email" type="email" /></div><div class="form-row"><label>Телефон</label><input name="phone" /></div><div class="form-row"><label>Статус</label><select name="active">${activeOptions(true)}</select></div><button class="primary">Добавить</button></form><form class="panel span-4 form-grid" id="admin-user-form"><h3>Новая учетка</h3><div class="form-row"><label>Логин</label><input name="username" required /></div><div class="form-row"><label>Сотрудник</label><select name="employeeId">${options(employees)}</select></div><div class="form-row"><label>Роль</label><select name="role" required>${roleOptions("manager")}</select></div><div class="form-row"><label>Временный пароль</label><input name="password" type="password" minlength="8" required /></div><div class="form-row"><label>Статус</label><select name="active">${activeOptions(true)}</select></div><button class="primary">Создать</button></form><div class="panel span-4"><h3>Сотрудники</h3>${simpleTable(employees, ["id", "fullName", "email", "phone", "active"])}</div><div class="panel span-12"><h3>Учетные записи</h3><div class="list">${users.length ? users.map(userAdminCard).join("") : `<div class="empty">Учеток пока нет</div>`}</div></div></section>`;
+}
+
+function userAdminCard(user) {
+  return `<article class="item"><div class="item-head"><div><div class="item-title">${escapeHtml(user.username)}</div><div class="meta"><span>${escapeHtml(user.id)}</span><span>${escapeHtml(user.role)}</span><span>${user.active === false ? "Отключен" : "Активен"}</span></div></div></div><form class="actions admin-user-update" data-id="${escapeHtml(user.id)}"><select name="employeeId">${options(state.data.employees || [], user.employeeId)}</select><select name="role">${roleOptions(user.role)}</select><select name="active">${activeOptions(user.active !== false)}</select><button class="secondary">Сохранить</button></form><form class="actions admin-password-reset" data-id="${escapeHtml(user.id)}"><input name="password" type="password" minlength="8" placeholder="Новый пароль" required /><button class="danger">Сбросить пароль</button></form></article>`;
+}
+
 function simpleTable(items, keys) {
   if (!items.length) return `<div class="empty">Нет записей</div>`;
   return `<table class="table"><thead><tr>${keys.map((key) => `<th>${escapeHtml(key)}</th>`).join("")}</tr></thead><tbody>${items.map((item) => `<tr>${keys.map((key) => `<td>${key.toLowerCase().includes("amount") || key === "balance" ? money(item[key]) : escapeHtml(item[key] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
@@ -238,6 +263,10 @@ function bindView() {
   bindForm("#company-form", async (data) => api("/customer-companies", { method: "POST", body: JSON.stringify({ id: id("company"), ...clean(data) }) }));
   bindForm("#link-form", async (data) => api("/customer-company-links", { method: "POST", body: JSON.stringify({ id: id("customer_company_link"), active: true, ...clean(data) }) }));
   bindForm("#payment-form", async (data) => api("/payments", { method: "POST", body: JSON.stringify(toNumbers(clean(data), ["amount"])) }));
+  bindForm("#employee-form", async (data) => api("/employees", { method: "POST", body: JSON.stringify({ id: id("employee"), ...toBooleans(clean(data), ["active"]) }) }));
+  bindForm("#admin-user-form", async (data) => api("/admin/users", { method: "POST", body: JSON.stringify(toBooleans(clean(data), ["active"])) }));
+  document.querySelectorAll(".admin-user-update").forEach((form) => form.addEventListener("submit", async (event) => submit(event, async (data) => api(`/admin/users/${form.dataset.id}`, { method: "PATCH", body: JSON.stringify(toBooleans(clean(data), ["active"])) }))));
+  document.querySelectorAll(".admin-password-reset").forEach((form) => form.addEventListener("submit", async (event) => submit(event, async (data) => api(`/admin/users/${form.dataset.id}/password`, { method: "POST", body: JSON.stringify(clean(data)) }))));
   bindForm("#allocation-form", async (data) => api("/payment-allocations", { method: "POST", body: JSON.stringify(toNumbers(clean(data), ["amount"])) }));
   document.querySelector("#production-contractor")?.addEventListener("change", async (event) => {
     state.data.productionContractorId = event.currentTarget.value;
@@ -274,6 +303,11 @@ function clean(input) {
 
 function toNumbers(input, keys) {
   for (const key of keys) if (input[key] !== undefined) input[key] = Number(input[key]);
+  return input;
+}
+
+function toBooleans(input, keys) {
+  for (const key of keys) if (input[key] !== undefined) input[key] = input[key] === "true";
   return input;
 }
 

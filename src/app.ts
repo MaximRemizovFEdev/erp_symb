@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { loadEnv } from "./config/env.js";
+import { registerAdminRoutes } from "./modules/admin/index.js";
 import { createAuthHooks, registerAuthRoutes, TokenService } from "./modules/auth/index.js";
 import { registerCrmRoutes } from "./modules/crm/index.js";
 import { registerOfficeRoutes } from "./modules/office/index.js";
@@ -46,6 +47,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       ? { authHooks, tokenService }
       : { dataDir: options.dataDir, authHooks, tokenService }
   );
+  registerAdminRoutes(app, options.dataDir === undefined ? { authHooks } : { dataDir: options.dataDir, authHooks });
   registerReferenceRoutes(
     app,
     options.dataDir === undefined ? { authHooks } : { dataDir: options.dataDir, authHooks }
