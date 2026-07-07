@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
-import { ZodError, type ZodType } from "zod";
+import { ZodError, type ZodTypeAny } from "zod";
 
 import type { AuthHooks } from "../auth/index.js";
 import type { OrderRecord } from "../orders/index.js";
@@ -197,14 +197,14 @@ function assertPaymentCanBeAllocatedToOrder(payment: PaymentRecord, order: Order
   }
 }
 
-function parseBody<T>(schema: ZodType<T>, body: unknown): T {
+function parseBody<T>(schema: ZodTypeAny, body: unknown): T {
   const result = schema.safeParse(body);
 
   if (!result.success) {
     throw validationError(result.error);
   }
 
-  return result.data;
+  return result.data as T;
 }
 
 function validationError(error: ZodError): AppError {

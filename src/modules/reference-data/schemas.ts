@@ -54,7 +54,7 @@ function updateSchemaFor(schema: z.AnyZodObject): z.ZodType<Partial<CollectionRe
 }
 
 function createSchemaFor(schema: z.AnyZodObject): z.ZodType<CollectionRecord> {
-  return schema.strict() as z.ZodType<CollectionRecord>;
+  return schema.strict() as unknown as z.ZodType<CollectionRecord>;
 }
 
 export type ReferenceDefinition = {

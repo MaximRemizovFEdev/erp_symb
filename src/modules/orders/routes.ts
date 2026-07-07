@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
-import { ZodError, type ZodType } from "zod";
+import { ZodError, type ZodTypeAny } from "zod";
 
 import type { AuthHooks, AuthUser } from "../auth/index.js";
 import { AppError } from "../../shared/errors.js";
@@ -320,7 +320,7 @@ export function registerOrderRoutes(app: FastifyInstance, options: RegisterOrder
   }
 }
 
-function copyOptionalNumber<T extends Record<string, unknown>>(target: T, key: string, value: number | undefined): void {
+function copyOptionalNumber(target: Record<string, unknown>, key: string, value: number | undefined): void {
   if (value !== undefined) {
     target[key] = value;
   }
@@ -338,14 +338,14 @@ function toCalculationResult(item: OrderItemRecord): OrderItemCalculationResult 
   };
 }
 
-function parseBody<T>(schema: ZodType<T>, body: unknown): T {
+function parseBody<T>(schema: ZodTypeAny, body: unknown): T {
   const result = schema.safeParse(body);
 
   if (!result.success) {
     throw validationError(result.error);
   }
 
-  return result.data;
+  return result.data as T;
 }
 
 function validationError(error: ZodError): AppError {

@@ -1,5 +1,5 @@
 import type { FastifyInstance, preHandlerHookHandler } from "fastify";
-import { ZodError, type ZodType } from "zod";
+import { ZodError, type ZodTypeAny } from "zod";
 
 import type { AuthHooks } from "../auth/index.js";
 import { AppError } from "../../shared/errors.js";
@@ -54,7 +54,7 @@ function registerReferenceCollectionRoutes(
   });
 
   app.post(definition.path, routeOptions(writePreHandler), async (request, reply) => {
-    const item = parseBody(definition.createSchema, request.body);
+    const item = parseBody<CollectionRecord>(definition.createSchema, request.body);
     const createdItem = await repository.insert(item);
 
     void reply.code(201);
@@ -63,7 +63,7 @@ function registerReferenceCollectionRoutes(
   });
 
   app.patch<{ Params: RouteParams }>(definition.path + "/:id", routeOptions(writePreHandler), async (request) => {
-    const patch = parseBody(definition.updateSchema, request.body);
+    const patch = parseBody<Partial<CollectionRecord>>(definition.updateSchema, request.body);
     const updatedItem = await repository.update(request.params.id, patch);
 
     return sanitizeForRole(updatedItem, request.currentUser?.role);
@@ -74,14 +74,14 @@ function routeOptions(preHandler: preHandlerHookHandler | undefined): { preHandl
   return preHandler === undefined ? {} : { preHandler };
 }
 
-function parseBody<T>(schema: ZodType<T>, body: unknown): T {
+function parseBody<T>(schema: ZodTypeAny, body: unknown): T {
   const result = schema.safeParse(body);
 
   if (!result.success) {
     throw validationError(result.error);
   }
 
-  return result.data;
+  return result.data as T;
 }
 
 function validationError(error: ZodError): AppError {
