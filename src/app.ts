@@ -3,8 +3,10 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { loadEnv } from "./config/env.js";
 import { createAuthHooks, registerAuthRoutes, TokenService } from "./modules/auth/index.js";
 import { registerCrmRoutes } from "./modules/crm/index.js";
+import { registerOfficeRoutes } from "./modules/office/index.js";
 import { registerOrderRoutes } from "./modules/orders/index.js";
 import { registerPaymentRoutes } from "./modules/payments/index.js";
+import { registerProductionRoutes } from "./modules/production/index.js";
 import { registerReferenceRoutes } from "./modules/reference-data/index.js";
 import { normalizeError, type ErrorResponse } from "./shared/errors.js";
 
@@ -48,6 +50,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   registerCrmRoutes(app, options.dataDir === undefined ? { authHooks } : { dataDir: options.dataDir, authHooks });
   registerOrderRoutes(app, options.dataDir === undefined ? { authHooks } : { dataDir: options.dataDir, authHooks });
   registerPaymentRoutes(app, options.dataDir === undefined ? { authHooks } : { dataDir: options.dataDir, authHooks });
+  registerProductionRoutes(app, options.dataDir === undefined ? { authHooks } : { dataDir: options.dataDir, authHooks });
+  registerOfficeRoutes(app, options.dataDir === undefined ? { authHooks } : { dataDir: options.dataDir, authHooks });
 
   app.setErrorHandler((error, request, reply) => {
     const appError = normalizeError(error);
