@@ -146,7 +146,9 @@ async function loadViewData() {
     const refs = ["customers", "customer-companies", "contractors", "order-statuses", "production-statuses", "office-statuses"].map((name) => api(`/${name}`).catch(() => []));
     const [customers, companies, contractors, orderStatuses, productionStatuses, officeStatuses] = await Promise.all(refs);
     Object.assign(state.data, { customers, companies, contractors, orderStatuses, productionStatuses, officeStatuses });
-    if (state.view === "orders") state.data.orders = await api("/orders");
+    if (state.view === "orders") {
+      [state.data.orders, state.data.links] = await Promise.all([api("/orders"), api("/customer-company-links")]);
+    }
     if (state.view === "crm") state.data.links = await api("/customer-company-links");
     if (state.view === "payments") {
       state.data.orders = await api("/orders").catch(() => []);
@@ -174,16 +176,17 @@ function viewHtml() {
 }
 
 function options(items, selected = "") {
-  return `<option value="">—</option>${(items || []).map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === selected ? "selected" : ""}>${escapeHtml(item.name || item.title || item.username || item.id)}</option>`).join("")}`;
+  return `<option value="">—</option>${(items || []).map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === selected ? "selected" : ""}>${escapeHtml(item.fullName || item.name || item.title || item.username || item.id)}</option>`).join("")}`;
 }
 
 function ordersView() {
   const orders = state.data.orders || [];
+  const firstCustomerId = state.data.customers?.[0]?.id || "";
   return `
     <div class="topbar"><div><h2>Заказы</h2><div class="subtle">Создание заказов, позиции и базовые статусы</div></div></div>
     <section class="kpis"><div class="kpi"><span>Заказов</span><strong>${orders.length}</strong></div><div class="kpi"><span>Сумма</span><strong>${money(orders.reduce((sum, order) => sum + Number(order.orderSum || 0), 0))}</strong></div><div class="kpi"><span>Оплачено</span><strong>${money(orders.reduce((sum, order) => sum + Number(order.paidAmount || 0), 0))}</strong></div><div class="kpi"><span>Долг</span><strong>${money(orders.reduce((sum, order) => sum + Number(order.paymentDue || 0), 0))}</strong></div></section>
     <section class="grid">
-      <form class="panel span-4 form-grid" id="order-form"><h3>Новый заказ</h3><div class="form-row"><label>Клиент</label><select name="customerId" required>${options(state.data.customers)}</select></div><div class="form-row"><label>Компания</label><select name="companyId">${options(state.data.companies)}</select></div><div class="form-row"><label>Комментарий</label><textarea name="comment"></textarea></div><button class="primary">Создать</button></form>
+      <form class="panel span-4 form-grid" id="order-form"><h3>Новый заказ</h3><div class="form-row"><label>Клиент</label><select id="order-customer-select" name="customerId" required>${options(state.data.customers)}</select></div><div class="form-row"><label>Компания</label><select id="order-company-select" name="companyId">${options(companiesForCustomer(firstCustomerId))}</select></div><div class="form-row"><label>Комментарий</label><textarea name="comment"></textarea></div><button class="primary">Создать</button></form>
       <div class="panel span-8"><h3>Список</h3><div class="list">${orders.length ? orders.map(orderCard).join("") : `<div class="empty">Заказов пока нет</div>`}</div></div>
     </section>`;
 }
@@ -192,8 +195,15 @@ function orderCard(order) {
   return `<article class="item"><div class="item-head"><div><div class="item-title">${escapeHtml(order.orderNumber || order.id)}</div><div class="meta"><span>Клиент: ${escapeHtml(order.customerId)}</span><span>Статус: ${escapeHtml(order.orderStatusId)}</span><span>Офис: ${escapeHtml(order.officeStatusId)}</span></div></div><strong>${money(order.orderSum)}</strong></div><div class="meta"><span class="badge">Оплачено ${money(order.paidAmount)}</span><span class="badge">К доплате ${money(order.paymentDue)}</span></div>${(order.items || []).map((item) => `<div class="meta"><span>${escapeHtml(item.name)}</span><span>${item.quantity} шт.</span><span>${money(item.pricePerUnit)}</span><span>${escapeHtml(item.productionStatusId || "")}</span></div>`).join("")}<form class="actions add-item" data-order-id="${escapeHtml(order.id)}"><input name="name" placeholder="Позиция" required /><input name="quantity" type="number" min="1" step="1" value="1" required /><input name="pricePerUnit" type="number" min="0" step="1" placeholder="Цена" required /><select name="contractorId">${options(state.data.contractors)}</select><button class="secondary">Добавить позицию</button></form></article>`;
 }
 
+function companiesForCustomer(customerId) {
+  if (!customerId) return [];
+  const links = state.data.links || [];
+  const companyIds = new Set(links.filter((link) => link.customerId === customerId && link.active !== false).map((link) => link.companyId));
+  return (state.data.companies || []).filter((company) => companyIds.has(company.id));
+}
+
 function crmView() {
-  return `<div class="topbar"><div><h2>Клиенты и компании</h2><div class="subtle">Справочник CRM и связи клиент-компания</div></div></div><section class="grid"><form class="panel span-4 form-grid" id="customer-form"><h3>Клиент</h3><div class="form-row"><label>Имя</label><input name="name" required /></div><div class="form-row"><label>Телефон</label><input name="phone" /></div><button class="primary">Добавить</button></form><form class="panel span-4 form-grid" id="company-form"><h3>Компания</h3><div class="form-row"><label>Название</label><input name="name" required /></div><div class="form-row"><label>ИНН</label><input name="taxId" /></div><button class="primary">Добавить</button></form><form class="panel span-4 form-grid" id="link-form"><h3>Связь</h3><div class="form-row"><label>Клиент</label><select name="customerId" required>${options(state.data.customers)}</select></div><div class="form-row"><label>Компания</label><select name="companyId" required>${options(state.data.companies)}</select></div><button class="primary">Связать</button></form><div class="panel span-6"><h3>Клиенты</h3>${simpleTable(state.data.customers || [], ["id", "name", "phone", "balance"])}</div><div class="panel span-6"><h3>Компании</h3>${simpleTable(state.data.companies || [], ["id", "name", "taxId", "balance"])}</div></section>`;
+  return `<div class="topbar"><div><h2>Клиенты и компании</h2><div class="subtle">Справочник CRM и связи клиент-компания</div></div></div><section class="grid"><form class="panel span-4 form-grid" id="customer-form"><h3>Клиент</h3><div class="form-row"><label>Имя</label><input name="fullName" required /></div><div class="form-row"><label>Телефон</label><input name="phone" /></div><button class="primary">Добавить</button></form><form class="panel span-4 form-grid" id="company-form"><h3>Компания</h3><div class="form-row"><label>Название</label><input name="name" required /></div><div class="form-row"><label>ИНН</label><input name="inn" /></div><button class="primary">Добавить</button></form><form class="panel span-4 form-grid" id="link-form"><h3>Связь</h3><div class="form-row"><label>Клиент</label><select name="customerId" required>${options(state.data.customers)}</select></div><div class="form-row"><label>Компания</label><select name="companyId" required>${options(state.data.companies)}</select></div><button class="primary">Связать</button></form><div class="panel span-6"><h3>Клиенты</h3>${simpleTable(state.data.customers || [], ["id", "fullName", "phone", "balance"])}</div><div class="panel span-6"><h3>Компании</h3>${simpleTable(state.data.companies || [], ["id", "name", "inn", "balance"])}</div></section>`;
 }
 
 function paymentsView() {
@@ -218,6 +228,10 @@ function simpleTable(items, keys) {
 }
 
 function bindView() {
+  document.querySelector("#order-customer-select")?.addEventListener("change", (event) => {
+    const companySelect = document.querySelector("#order-company-select");
+    if (companySelect) companySelect.innerHTML = options(companiesForCustomer(event.currentTarget.value));
+  });
   bindForm("#order-form", async (data) => api("/orders", { method: "POST", body: JSON.stringify(clean(data)) }));
   document.querySelectorAll(".add-item").forEach((form) => form.addEventListener("submit", async (event) => submit(event, async (data) => api(`/orders/${form.dataset.orderId}/items`, { method: "POST", body: JSON.stringify(toNumbers(clean(data), ["quantity", "pricePerUnit"])) }))));
   bindForm("#customer-form", async (data) => api("/customers", { method: "POST", body: JSON.stringify({ id: id("customer"), ...clean(data) }) }));
